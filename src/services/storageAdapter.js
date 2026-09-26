@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const USERS_KEY = '@lemora/users';
 const SESSION_KEY = '@lemora/session_user_id';
 const ATTENDANCE_KEY = '@lemora/attendance';
+const LEAVE_REQUESTS_KEY = '@lemora/leave_requests';
 
 class LocalStorageAdapter {
   async getAllUsers() {
@@ -65,6 +66,19 @@ class LocalStorageAdapter {
     const records = raw ? JSON.parse(raw) : {};
     records[userId] = attendance;
     await AsyncStorage.setItem(ATTENDANCE_KEY, JSON.stringify(records));
+  }
+
+  async getLeaveRequestsForUser(userId) {
+    const raw = await AsyncStorage.getItem(LEAVE_REQUESTS_KEY);
+    const records = raw ? JSON.parse(raw) : {};
+    return Array.isArray(records[userId]) ? records[userId] : [];
+  }
+
+  async saveLeaveRequestsForUser(userId, requests) {
+    const raw = await AsyncStorage.getItem(LEAVE_REQUESTS_KEY);
+    const records = raw ? JSON.parse(raw) : {};
+    records[userId] = requests;
+    await AsyncStorage.setItem(LEAVE_REQUESTS_KEY, JSON.stringify(records));
   }
 }
 
