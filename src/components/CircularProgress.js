@@ -27,6 +27,7 @@ export default function CircularProgress({
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0, Math.min(100, percentage));
   const strokeDashoffset = circumference - (clamped / 100) * circumference;
+  const percentageFontSize = Math.max(12, Math.min(20, size * 0.34));
 
   return (
     <View style={{ width: size, height: size }}>
@@ -58,7 +59,7 @@ export default function CircularProgress({
       </Svg>
       <View style={StyleSheet.absoluteFillObject}>
         <View style={styles.centerContent}>
-          <Text style={styles.percentText}>{clamped}%</Text>
+          <Text style={[styles.percentText, { fontSize: percentageFontSize }]}>{clamped}%</Text>
           {label ? <Text style={styles.label}>{label}</Text> : null}
         </View>
       </View>
@@ -73,9 +74,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   percentText: {
-    fontSize: 18,
+    lineHeight: 24,
     fontWeight: '700',
     color: '#3A3A3A',
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   label: {
     fontSize: 11,

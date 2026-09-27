@@ -380,19 +380,20 @@ const styles = StyleSheet.create({
   statRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   statLabel: {
-    flexShrink: 1,
+    width: 48,
     fontSize: 11,
     color: '#6A6A6A',
-    marginRight: 4,
+    marginRight: 3,
+    marginLeft: 8,
   },
   statValue: {
     fontSize: 12,
     fontWeight: '700',
     color: '#3A3A3A',
-    marginLeft: 'auto',
+    marginLeft: 10,
     textAlign: 'right',
   },
   statValueGreen: {
