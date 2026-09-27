@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,16 @@ import {
   StatusBar,
   SafeAreaView,
   Platform,
+  AppState,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import CircularProgress from '../components/CircularProgress';
 import MenuItem from '../components/MenuItem';
 import { getCurrentUser, logout } from '../services/authService';
 import { checkIn, checkOut, getTodayAttendance } from '../services/attendanceService';
+import { processMissedAttendanceDays } from '../services/attendanceAbsenceService';
+import { getMonthKey, getMonthlyAttendanceMetrics } from '../services/attendanceMetricsService';
+import { subscribeToAttendanceMetrics } from '../services/attendanceMetricsEvents';
 import FingerPrintIcon from '../assets/icons/fingure.svg';
 // Fallback shown only if no logged-in user is found (shouldn't normally
 // happen, since AppNavigator only routes here after a session check).
@@ -24,48 +29,97 @@ const FALLBACK_USER = {
   photo: null,
 };
 
-const ATTENDANCE = {
-  percentage: 15,
-  nod: 31, // Number Of Days
-  attended: 4.5,
-};
-
 export default function HomeScreen({ navigation } = {}) {
+  const [attendanceMetrics, setAttendanceMetrics] = useState(() => ({
+    percentage: 0,
+    nod: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate(),
+    attended: 0,
+    leave: 0,
+  }));
   const [user, setUser] = useState(FALLBACK_USER);
   const [userId, setUserId] = useState(null);
   const [todayRecord, setTodayRecord] = useState(null);
   const [punchState, setPunchState] = useState('loading');
   const [isPunching, setIsPunching] = useState(false);
 
-  useEffect(() => {
+  const refreshMetrics = useCallback(async (id = userId) => {
+    if (!id) return;
+    const metrics = await getMonthlyAttendanceMetrics(id, getMonthKey(new Date()));
+    setAttendanceMetrics(metrics);
+  }, [userId]);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
     (async () => {
       const current = await getCurrentUser();
       if (current) {
-        const record = await getTodayAttendance(current.userId);
-        setUserId(current.userId);
-        setTodayRecord(record);
-        setPunchState(record?.checkOut ? 'completed' : record?.checkIn ? 'checkedIn' : 'ready');
-        setUser({
-          name: current.fullName?.toUpperCase() || FALLBACK_USER.name,
-          role: current.designation || '',
-          photo: current.profilePhotoUri || null,
-        });
+        await processMissedAttendanceDays(current.userId).catch(() => {});
+        const [record, metrics] = await Promise.all([
+          getTodayAttendance(current.userId),
+          getMonthlyAttendanceMetrics(current.userId, getMonthKey(new Date())),
+        ]);
+        if (active) {
+          setUserId(current.userId);
+          setTodayRecord(record);
+          setAttendanceMetrics(metrics);
+          setPunchState(record?.checkOut ? 'completed' : record?.checkIn ? 'checkedIn' : 'ready');
+          setUser({
+            name: current.fullName?.toUpperCase() || FALLBACK_USER.name,
+            role: current.designation || '',
+            photo: current.profilePhotoUri || null,
+          });
+        }
       }
-      else setPunchState('ready');
+      else if (active) setPunchState('ready');
     })();
-  }, []);
+    return () => { active = false; };
+  }, []));
+
+  useEffect(() => subscribeToAttendanceMetrics((changedUserId) => {
+    if (!changedUserId || changedUserId === userId) {
+      refreshMetrics(changedUserId || userId).catch(() => {});
+    }
+  }), [refreshMetrics, userId]);
+
+  useEffect(() => {
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshMetrics().catch(() => {});
+    });
+    return () => appStateSubscription.remove();
+  }, [refreshMetrics]);
+
+  useEffect(() => {
+    let timer;
+    const scheduleNextMonthRefresh = () => {
+      const now = new Date();
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      timer = setTimeout(() => {
+        refreshMetrics().catch(() => {});
+        scheduleNextMonthRefresh();
+      }, nextMonth.getTime() - now.getTime() + 50);
+    };
+    scheduleNextMonthRefresh();
+    return () => clearTimeout(timer);
+  }, [refreshMetrics]);
 
   const handlePunch = async () => {
     if (!userId || isPunching || punchState === 'completed') return;
     setIsPunching(true);
-    const result = punchState === 'checkedIn' ? await checkOut(userId) : await checkIn(userId);
-    setIsPunching(false);
-    if (!result.success) {
-      Alert.alert('Punch unavailable', result.error);
-      return;
+    try {
+      const result = punchState === 'checkedIn' ? await checkOut(userId) : await checkIn(userId);
+      if (!result.success) {
+        const authenticationFailed = result.error?.startsWith('Authentication');
+        Alert.alert(authenticationFailed ? 'Authentication required' : 'Punch unavailable', result.error);
+        return;
+      }
+      setTodayRecord(result.record);
+      setPunchState(result.record.checkOut ? 'completed' : 'checkedIn');
+      await refreshMetrics();
+    } catch (error) {
+      Alert.alert('Punch unavailable', 'Authentication or attendance could not be completed. Please try again.');
+    } finally {
+      setIsPunching(false);
     }
-    setTodayRecord(result.record);
-    setPunchState(result.record.checkOut ? 'completed' : 'checkedIn');
   };
 
   const handleLogout = async () => {
@@ -107,22 +161,30 @@ export default function HomeScreen({ navigation } = {}) {
             <View style={[styles.card, styles.attendanceCard]}>
               <Text style={styles.cardTitle}>Total Attendance</Text>
               <View style={styles.attendanceBody}>
-                <CircularProgress
-                  percentage={ATTENDANCE.percentage}
-                  size={90}
-                  strokeWidth={7}
-                  color="#C0304A"
-                  trackColor="#EFE6E6"
-                />
-                <View style={{ marginLeft: 14 }}>
+                <View style={styles.progressWrap}>
+                  <CircularProgress
+                    percentage={attendanceMetrics.percentage}
+                    size={58}
+                    strokeWidth={5}
+                    color="#C0304A"
+                    trackColor="#EFE6E6"
+                  />
+                </View>
+                <View style={styles.metricsList}>
                   <View style={styles.statRow}>
                     <Text style={styles.statLabel}>NOD</Text>
-                    <Text style={styles.statValue}>: {ATTENDANCE.nod}</Text>
+                    <Text style={styles.statValue}>{attendanceMetrics.nod}</Text>
                   </View>
                   <View style={styles.statRow}>
                     <Text style={styles.statLabel}>Attended</Text>
                     <Text style={[styles.statValue, styles.statValueGreen]}>
-                      : {ATTENDANCE.attended}
+                      {attendanceMetrics.attended}
+                    </Text>
+                  </View>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Leave</Text>
+                    <Text style={[styles.statValue, styles.statValueLeave]}>
+                      {attendanceMetrics.leave}
                     </Text>
                   </View>
                 </View>
@@ -292,6 +354,7 @@ const styles = StyleSheet.create({
   punchCard: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cardTitle: {
     fontSize: 13,
@@ -303,22 +366,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  progressWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginRight: 8,
+  },
+  metricsList: {
+    flex: 1,
+    minWidth: 0,
+    width: '100%',
+  },
   statRow: {
     flexDirection: 'row',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 4,
   },
   statLabel: {
-    fontSize: 13,
+    flexShrink: 1,
+    fontSize: 11,
     color: '#6A6A6A',
-    width: 60,
+    marginRight: 4,
   },
   statValue: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#3A3A3A',
+    marginLeft: 'auto',
+    textAlign: 'right',
   },
   statValueGreen: {
     color: '#2E9E4F',
+  },
+  statValueLeave: {
+    color: '#2463A6',
   },
   punchButton: {
     width: 88,

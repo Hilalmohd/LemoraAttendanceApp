@@ -122,9 +122,9 @@ export default function RegisterScreen({ navigation }) {
 
             <Text style={styles.label}>Designation</Text>
             <View style={styles.pickerWrap}>
-              <Picker selectedValue={designation} onValueChange={setDesignation}>
+              <Picker selectedValue={designation} onValueChange={setDesignation} style={styles.picker} dropdownIconColor="#332F2F">
                 {DESIGNATIONS.map((d) => (
-                  <Picker.Item key={d} label={d} value={d} />
+                  <Picker.Item key={d} label={d} value={d} color="#332F2F" />
                 ))}
               </Picker>
             </View>
@@ -285,6 +285,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FAFAFA',
     overflow: 'hidden',
+  },
+  picker: {
+    color: '#332F2F',
+    backgroundColor: '#FAFAFA',
   },
   error: {
     color: '#C0304A',

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { notifyAttendanceMetricsChanged } from './attendanceMetricsEvents';
 
 /**
  * LocalStorageAdapter
@@ -66,6 +67,7 @@ class LocalStorageAdapter {
     const records = raw ? JSON.parse(raw) : {};
     records[userId] = attendance;
     await AsyncStorage.setItem(ATTENDANCE_KEY, JSON.stringify(records));
+    notifyAttendanceMetricsChanged(userId);
   }
 
   async getLeaveRequestsForUser(userId) {
@@ -79,6 +81,7 @@ class LocalStorageAdapter {
     const records = raw ? JSON.parse(raw) : {};
     records[userId] = requests;
     await AsyncStorage.setItem(LEAVE_REQUESTS_KEY, JSON.stringify(records));
+    notifyAttendanceMetricsChanged(userId);
   }
 }
 

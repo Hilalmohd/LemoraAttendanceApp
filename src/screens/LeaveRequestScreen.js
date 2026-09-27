@@ -127,9 +127,9 @@ export default function LeaveRequestScreen({ navigation }) {
                 </View>
                 <Text style={styles.label}>Type of Leave</Text>
                 <View style={[styles.pickerWrap, errors.leaveType && styles.invalidField]}>
-                    <Picker selectedValue={leaveType} onValueChange={(value) => { setLeaveType(value); setErrors((current) => ({ ...current, leaveType: '' })); }} style={styles.picker}>
-                        <Picker.Item label="Select leave type" value="" />
-                        {LEAVE_TYPES.map((type) => <Picker.Item key={type} label={type} value={type} />)}
+                    <Picker selectedValue={leaveType} onValueChange={(value) => { setLeaveType(value); setErrors((current) => ({ ...current, leaveType: '' })); }} style={styles.picker} dropdownIconColor="#332F2F">
+                        <Picker.Item label="Select leave type" value="" color="#817A7A" />
+                        {LEAVE_TYPES.map((type) => <Picker.Item key={type} label={type} value={type} color="#332F2F" />)}
                     </Picker>
                 </View>
                 {errors.leaveType ? <Text style={styles.errorText}>{errors.leaveType}</Text> : null}
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     placeholder: { color: '#969090' },
     calendarIcon: { color: '#B23A4E', fontSize: 18, marginLeft: 5 },
     pickerWrap: { backgroundColor: '#FFF', borderRadius: 10, borderWidth: 1, borderColor: '#E8E2E2', overflow: 'hidden', marginBottom: 4 },
-    picker: { height: 54 },
+    picker: { height: 54, color: '#332F2F', backgroundColor: '#FFF' },
     reasonInput: { minHeight: 138, backgroundColor: '#FFF', borderRadius: 10, borderWidth: 1, borderColor: '#E8E2E2', padding: 14, fontSize: 14, color: '#332F2F' },
     reasonFooter: { minHeight: 28, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     helperText: { color: '#898282', fontSize: 11, flex: 1 },

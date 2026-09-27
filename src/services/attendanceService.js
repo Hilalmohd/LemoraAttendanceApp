@@ -1,4 +1,5 @@
 import storageAdapter from './storageAdapter';
+import { authenticatePunch } from './punchAuthenticationService';
 
 function pad(value) {
   return String(value).padStart(2, '0');
@@ -35,8 +36,11 @@ export async function checkIn(userId, date = new Date()) {
   if (existing?.checkIn) {
     return { success: false, error: 'You have already checked in today.' };
   }
+  if (!await authenticatePunch('punch in')) {
+    return { success: false, error: 'Authentication was cancelled or could not be completed.' };
+  }
 
-  const updatedRecord = { ...(existing || {}), date: dateKey, checkIn: getTimeKey(date) };
+  const updatedRecord = { ...(existing || {}), date: dateKey, checkIn: getTimeKey(date), status: 'Present', absent: false };
   const updatedRecords = existing
     ? records.map((record) => (record.date === dateKey ? updatedRecord : record))
     : [...records, updatedRecord];
@@ -55,6 +59,9 @@ export async function checkOut(userId, date = new Date()) {
   }
   if (existing.checkOut) {
     return { success: false, error: 'You have already checked out today.' };
+  }
+  if (!await authenticatePunch('punch out')) {
+    return { success: false, error: 'Authentication was cancelled or could not be completed.' };
   }
 
   const updatedRecord = { ...existing, checkOut: getTimeKey(date) };

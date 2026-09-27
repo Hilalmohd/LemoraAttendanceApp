@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator, FlatList, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { getCurrentUser } from '../services/authService';
 import { getAttendanceRecords } from '../services/attendanceService';
+import { processMissedAttendanceDays } from '../services/attendanceAbsenceService';
+import { useFocusEffect } from '@react-navigation/native';
 
 const GRACE_PERIOD_MINUTES = 9 * 60 + 30;
 const MONTH_NAMES = [
@@ -60,11 +62,12 @@ export default function AttendanceScreen({ navigation }) {
     });
   }, []);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let active = true;
     (async () => {
       try {
         const user = await getCurrentUser();
+        await processMissedAttendanceDays(user?.userId);
         const attendance = await getAttendanceRecords(user?.userId);
         if (active) { setRecords(attendance); setStatus('ready'); }
       } catch (loadError) {
@@ -72,7 +75,7 @@ export default function AttendanceScreen({ navigation }) {
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, []));
 
   const visibleRecords = records.filter((record) => record.date.startsWith(selectedMonth));
 
@@ -88,8 +91,8 @@ export default function AttendanceScreen({ navigation }) {
       <View style={styles.body}>
         <Text style={styles.fieldLabel}>SELECT MONTH</Text>
         <View style={styles.pickerWrap}>
-          <Picker selectedValue={selectedMonth} onValueChange={setSelectedMonth} style={styles.picker}>
-            {monthOptions.map((option) => <Picker.Item key={option.key} label={option.label} value={option.key} />)}
+          <Picker selectedValue={selectedMonth} onValueChange={setSelectedMonth} style={styles.picker} dropdownIconColor="#332F2F">
+            {monthOptions.map((option) => <Picker.Item key={option.key} label={option.label} value={option.key} color="#332F2F" />)}
           </Picker>
         </View>
         {status === 'loading' && <View style={styles.centerState}><ActivityIndicator size="large" color="#B23A4E" /><Text style={styles.stateText}>Loading attendance...</Text></View>}
@@ -102,8 +105,9 @@ export default function AttendanceScreen({ navigation }) {
             ListEmptyComponent={<View style={styles.centerState}><Text style={styles.stateTitle}>No attendance records</Text><Text style={styles.stateText}>There are no records for the selected month.</Text></View>}
             renderItem={({ item }) => {
               const lateMinutes = getLateMinutes(item.checkIn);
+              const isLeave = item.status === 'Leave' || item.status === 'Absent' || item.absent === true;
               return <View style={[styles.record, lateMinutes > 0 && styles.lateRecord]}>
-                <View style={styles.recordHeading}><Text style={styles.recordDate}>{formatDate(item.date)}</Text>{lateMinutes > 0 && <Text style={styles.lateBadge}>LATE</Text>}</View>
+                <View style={styles.recordHeading}><Text style={styles.recordDate}>{formatDate(item.date)}</Text>{isLeave ? <Text style={styles.leaveBadge}>LEAVE</Text> : lateMinutes > 0 && <Text style={styles.lateBadge}>LATE</Text>}</View>
                 <View style={styles.detailsRow}>
                   <Detail label="Check-in" value={formatTime(item.checkIn)} />
                   <Detail label="Check-out" value={formatTime(item.checkOut)} />
@@ -133,7 +137,7 @@ const styles = StyleSheet.create({
   body: { flex: 1, padding: 18 },
   fieldLabel: { color: '#777', fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 7 },
   pickerWrap: { backgroundColor: '#FFF', borderRadius: 12, marginBottom: 18, overflow: 'hidden' },
-  picker: { height: 52 },
+  picker: { height: 52, color: '#332F2F', backgroundColor: '#FFF' },
   list: { paddingBottom: 20 },
   emptyList: { flexGrow: 1 },
   record: { backgroundColor: '#FFF', borderRadius: 14, padding: 15, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: '#D9D4D4' },
@@ -141,6 +145,7 @@ const styles = StyleSheet.create({
   recordHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
   recordDate: { color: '#2F2B2B', fontSize: 16, fontWeight: '700' },
   lateBadge: { color: '#A95821', backgroundColor: '#FFF0E3', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, fontSize: 10, fontWeight: '800' },
+  leaveBadge: { color: '#2463A6', backgroundColor: '#E6F1FF', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, fontSize: 10, fontWeight: '800' },
   detailsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   detail: { flex: 1 },
   detailLabel: { color: '#888', fontSize: 10, marginBottom: 5 },
