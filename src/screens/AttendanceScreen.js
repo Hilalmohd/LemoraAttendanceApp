@@ -4,11 +4,10 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { getCurrentUser } from '../services/authService';
-import { getAttendanceRecords } from '../services/attendanceService';
+import { getAttendanceRecords, getLateMinutes } from '../services/attendanceService';
 import { processMissedAttendanceDays } from '../services/attendanceAbsenceService';
 import { useFocusEffect } from '@react-navigation/native';
 
-const GRACE_PERIOD_MINUTES = 9 * 60 + 30;
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -30,10 +29,6 @@ function minutesFromTime(value) {
   if (!value) return null;
   const [hours, minutes] = value.split(':').map(Number);
   return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : null;
-}
-function getLateMinutes(checkIn) {
-  const minutes = minutesFromTime(checkIn);
-  return minutes === null || minutes <= GRACE_PERIOD_MINUTES ? 0 : minutes - GRACE_PERIOD_MINUTES;
 }
 function formatDuration(minutes) {
   if (!minutes) return 'No Delay';
@@ -112,7 +107,7 @@ export default function AttendanceScreen({ navigation }) {
                   <Detail label="Check-in" value={formatTime(item.checkIn)} />
                   <Detail label="Check-out" value={formatTime(item.checkOut)} />
                   <Detail label="Total hours" value={getWorkingHours(item)} />
-                  <Detail label="Late hours" value={formatDuration(lateMinutes)} late={lateMinutes > 0} />
+                  <Detail label="Late hours" value={isLeave ? 'No Check-In' : formatDuration(lateMinutes)} late={lateMinutes > 0} leave={isLeave} />
                 </View>
               </View>;
             }}
@@ -123,8 +118,8 @@ export default function AttendanceScreen({ navigation }) {
   );
 }
 
-function Detail({ label, value, late }) {
-  return <View style={styles.detail}><Text style={styles.detailLabel}>{label}</Text><Text style={[styles.detailValue, late && styles.lateText]}>{value}</Text></View>;
+function Detail({ label, value, late, leave }) {
+  return <View style={styles.detail}><Text style={styles.detailLabel}>{label}</Text><Text style={[styles.detailValue, late && styles.lateText, leave && styles.leaveText]}>{value}</Text></View>;
 }
 
 const styles = StyleSheet.create({
@@ -151,6 +146,7 @@ const styles = StyleSheet.create({
   detailLabel: { color: '#888', fontSize: 10, marginBottom: 5 },
   detailValue: { color: '#3B3737', fontSize: 12, fontWeight: '700' },
   lateText: { color: '#B86128' },
+  leaveText: { color: '#2463A6' },
   centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
   stateTitle: { color: '#3B3737', fontSize: 17, fontWeight: '700', marginBottom: 7, textAlign: 'center' },
   stateText: { color: '#888', fontSize: 13, textAlign: 'center', marginTop: 10 },
