@@ -9,6 +9,8 @@ import HomeScreen from '../screens/HomeScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import LeaveRequestScreen from '../screens/LeaveRequestScreen';
 import LeaveSummaryScreen from '../screens/LeaveSummaryScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import AboutUsScreen from '../screens/AboutUsScreen';
 import { getCurrentUser } from '../services/authService';
 
 const Stack = createNativeStackNavigator();
@@ -46,6 +48,8 @@ export default function AppNavigator() {
         <Stack.Screen name="Attendance" component={AttendanceScreen} />
         <Stack.Screen name="LeaveRequests" component={LeaveRequestScreen} />
         <Stack.Screen name="LeaveSummary" component={LeaveSummaryScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="AboutUs" component={AboutUsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

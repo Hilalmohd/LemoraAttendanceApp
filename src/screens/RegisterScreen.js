@@ -15,8 +15,8 @@ import {
   Alert,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { registerUser, DESIGNATIONS } from '../services/authService';
+import { pickProfileImage } from '../utils/profileImagePicker';
 
 export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState('');
@@ -28,20 +28,13 @@ export default function RegisterScreen({ navigation }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const pickFromCamera = async () => {
-    const result = await launchCamera({ mediaType: 'photo', quality: 0.7, saveToPhotos: false });
-    handlePickerResult(result);
-  };
-
-  const pickFromGallery = async () => {
-    const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.7 });
-    handlePickerResult(result);
-  };
-
-  const handlePickerResult = (result) => {
-    if (result.didCancel || result.errorCode) return;
-    const asset = result.assets && result.assets[0];
-    if (asset?.uri) setPhotoUri(asset.uri);
+  const selectPhoto = async (source) => {
+    const result = await pickProfileImage(source);
+    if (result.error) {
+      Alert.alert('Photo unavailable', result.error);
+      return;
+    }
+    if (result.uri) setPhotoUri(result.uri);
   };
 
   const handleRegister = async () => {
@@ -102,10 +95,10 @@ export default function RegisterScreen({ navigation }) {
                 )}
               </View>
               <View style={styles.photoButtonsRow}>
-                <TouchableOpacity style={styles.photoButton} onPress={pickFromCamera}>
+                <TouchableOpacity style={styles.photoButton} onPress={() => selectPhoto('camera')}>
                   <Text style={styles.photoButtonText}>📷 Camera</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.photoButton} onPress={pickFromGallery}>
+                <TouchableOpacity style={styles.photoButton} onPress={() => selectPhoto('gallery')}>
                   <Text style={styles.photoButtonText}>🖼️ Gallery</Text>
                 </TouchableOpacity>
               </View>

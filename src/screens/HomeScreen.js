@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   Image,
@@ -11,6 +12,8 @@ import {
   SafeAreaView,
   Platform,
   AppState,
+  Dimensions,
+  Modal,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import CircularProgress from '../components/CircularProgress';
@@ -30,6 +33,9 @@ const FALLBACK_USER = {
 };
 
 export default function HomeScreen({ navigation } = {}) {
+  const drawerWidth = Math.min(Dimensions.get('window').width * 0.84, 340);
+  const drawerTranslateX = useRef(new Animated.Value(-drawerWidth)).current;
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [attendanceMetrics, setAttendanceMetrics] = useState(() => ({
     percentage: 0,
     nod: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate(),
@@ -127,6 +133,20 @@ export default function HomeScreen({ navigation } = {}) {
     navigation?.reset?.({ index: 0, routes: [{ name: 'Login' }] });
   };
 
+  const openDrawer = () => {
+    setDrawerVisible(true);
+    Animated.timing(drawerTranslateX, { toValue: 0, duration: 220, useNativeDriver: true }).start();
+  };
+
+  const closeDrawer = (onClosed) => {
+    Animated.timing(drawerTranslateX, { toValue: -drawerWidth, duration: 180, useNativeDriver: true }).start(() => {
+      setDrawerVisible(false);
+      onClosed?.();
+    });
+  };
+
+  const navigateFromDrawer = (screen) => closeDrawer(() => navigation?.navigate?.(screen));
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#B23A4E" />
@@ -138,15 +158,17 @@ export default function HomeScreen({ navigation } = {}) {
         {/* ---------- Header (photo + name + role) ---------- */}
         <View style={styles.header}>
           <View style={styles.headerRow}>
-            {user.photo ? (
-              <Image source={{ uri: user.photo }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                <Text style={styles.avatarInitial}>
-                  {user.name?.charAt(0) || '?'}
-                </Text>
-              </View>
-            )}
+            <TouchableOpacity onPress={openDrawer} accessibilityRole="button" accessibilityLabel="Open profile menu">
+              {user.photo ? (
+                <Image source={{ uri: user.photo }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                  <Text style={styles.avatarInitial}>
+                    {user.name?.charAt(0) || '?'}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
             <View style={{ marginLeft: 14, flex: 1 }}>
               <Text style={styles.userName}>{user.name}</Text>
               <Text style={styles.userRole}>{user.role}</Text>
@@ -256,6 +278,32 @@ export default function HomeScreen({ navigation } = {}) {
 
         <View style={{ height: 24 }} />
       </ScrollView>
+      <Modal visible={drawerVisible} transparent animationType="none" onRequestClose={() => closeDrawer()}>
+        <View style={styles.drawerModal}>
+          <TouchableOpacity style={styles.drawerScrim} activeOpacity={1} onPress={() => closeDrawer()} />
+          <Animated.View style={[styles.drawerPanel, { width: drawerWidth, transform: [{ translateX: drawerTranslateX }] }]}>
+            <View style={styles.drawerProfile}>
+              {user.photo ? <Image source={{ uri: user.photo }} style={styles.drawerAvatar} /> : (
+                <View style={[styles.drawerAvatar, styles.drawerAvatarPlaceholder]}>
+                  <Text style={styles.drawerAvatarInitial}>{user.name?.charAt(0) || '?'}</Text>
+                </View>
+              )}
+              <Text style={styles.drawerName}>{user.name}</Text>
+              <Text style={styles.drawerRole}>{user.role || 'Employee'}</Text>
+            </View>
+            <TouchableOpacity style={styles.drawerItem} onPress={() => navigateFromDrawer('Profile')}>
+              <Text style={styles.drawerItemIcon}>◉</Text>
+              <Text style={styles.drawerItemText}>Profile</Text>
+              <Text style={styles.drawerChevron}>›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.drawerItem} onPress={() => navigateFromDrawer('AboutUs')}>
+              <Text style={styles.drawerItemIcon}>ⓘ</Text>
+              <Text style={styles.drawerItemText}>About Us</Text>
+              <Text style={styles.drawerChevron}>›</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -465,6 +513,80 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   iconEmoji: {
+    fontSize: 24,
+  },
+  drawerModal: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(23, 18, 18, 0.42)',
+  },
+  drawerScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  drawerPanel: {
+    height: '100%',
+    backgroundColor: '#FFF',
+    paddingTop: Platform.OS === 'android' ? 34 : 54,
+    paddingHorizontal: 18,
+    elevation: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 4, height: 0 },
+  },
+  drawerProfile: {
+    alignItems: 'flex-start',
+    paddingBottom: 22,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0ECEC',
+    marginBottom: 10,
+  },
+  drawerAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#EEE',
+  },
+  drawerAvatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0E4E4',
+  },
+  drawerAvatarInitial: {
+    color: '#B23A4E',
+    fontSize: 25,
+    fontWeight: '700',
+  },
+  drawerName: {
+    color: '#332F2F',
+    fontSize: 17,
+    fontWeight: '700',
+    marginTop: 12,
+  },
+  drawerRole: {
+    color: '#817A7A',
+    fontSize: 13,
+    marginTop: 3,
+  },
+  drawerItem: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  drawerItemIcon: {
+    width: 32,
+    color: '#B23A4E',
+    fontSize: 19,
+  },
+  drawerItemText: {
+    flex: 1,
+    color: '#3A3535',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  drawerChevron: {
+    color: '#AAA2A2',
     fontSize: 24,
   },
 });

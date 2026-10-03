@@ -36,6 +36,10 @@
 	</dict>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID or your device passcode to confirm attendance punches.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Use the camera to take a profile photo.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose a photo from your library for your profile.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>UILaunchStoryboardName</key>

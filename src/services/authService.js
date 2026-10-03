@@ -80,6 +80,26 @@ export async function getCurrentUser() {
   return user ? toPublicUser(user) : null;
 }
 
+export async function updateProfile({ fullName, designation, profilePhotoUri }) {
+  if (!fullName?.trim()) return { success: false, error: 'Full name is required.' };
+  if (!DESIGNATIONS.includes(designation)) return { success: false, error: 'Please select a designation.' };
+
+  const userId = await storageAdapter.getSession();
+  if (!userId) return { success: false, error: 'You must be logged in to update your profile.' };
+
+  const existingUser = await storageAdapter.getUserByUserId(userId);
+  if (!existingUser) return { success: false, error: 'Your account could not be found.' };
+
+  const updatedUser = {
+    ...existingUser,
+    fullName: fullName.trim(),
+    designation,
+    profilePhotoUri: profilePhotoUri || null,
+  };
+  await storageAdapter.saveUser(updatedUser);
+  return { success: true, user: toPublicUser(updatedUser) };
+}
+
 export async function logout() {
   await storageAdapter.clearSession();
 }
