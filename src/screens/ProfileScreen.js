@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -15,8 +17,10 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { DESIGNATIONS, getCurrentUser, updateProfile } from '../services/authService';
 import { pickProfileImage } from '../utils/profileImagePicker';
+import useKeyboardAwareScroll from '../utils/useKeyboardAwareScroll';
 
 export default function ProfileScreen({ navigation }) {
+  const { scrollRef, onInputFocus } = useKeyboardAwareScroll();
   const [fullName, setFullName] = useState('');
   const [designation, setDesignation] = useState(DESIGNATIONS[0]);
   const [userId, setUserId] = useState('');
@@ -95,7 +99,14 @@ export default function ProfileScreen({ navigation }) {
       {loading ? (
         <View style={styles.loading}><ActivityIndicator size="large" color="#B23A4E" /></View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <KeyboardAvoidingView style={styles.formArea} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        >
           <View style={styles.photoSection}>
             {profilePhotoUri ? (
               <Image source={{ uri: profilePhotoUri }} style={styles.avatar} />
@@ -122,6 +133,7 @@ export default function ProfileScreen({ navigation }) {
               placeholderTextColor="#999"
               autoCapitalize="words"
               maxLength={80}
+              onFocus={onInputFocus}
             />
 
             <Text style={styles.label}>Designation</Text>
@@ -137,6 +149,7 @@ export default function ProfileScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
       )}
     </SafeAreaView>
   );
@@ -151,6 +164,7 @@ const styles = StyleSheet.create({
   subtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 3 },
   content: { flexGrow: 1, padding: 20, paddingBottom: 36 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  formArea: { flex: 1 },
   photoSection: { alignItems: 'center', paddingVertical: 24 },
   avatar: { width: 112, height: 112, borderRadius: 56, backgroundColor: '#EEE' },
   avatarPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F0E4E4' },

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
     Alert,
+    KeyboardAvoidingView,
     Modal,
     SafeAreaView,
     ScrollView,
@@ -10,10 +11,12 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { getCurrentUser } from '../services/authService';
 import { LEAVE_TYPES, submitLeaveRequest } from '../services/leaveService';
+import useKeyboardAwareScroll from '../utils/useKeyboardAwareScroll';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -34,6 +37,7 @@ function displayDate(value) {
 }
 
 export default function LeaveRequestScreen({ navigation }) {
+    const { scrollRef, onInputFocus } = useKeyboardAwareScroll();
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [leaveType, setLeaveType] = useState('');
@@ -119,7 +123,14 @@ export default function LeaveRequestScreen({ navigation }) {
                 </TouchableOpacity>
                 <View><Text style={styles.title}>Leave Request</Text><Text style={styles.subtitle}>Share your time away</Text></View>
             </View>
-            <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <KeyboardAvoidingView style={styles.formArea} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <ScrollView
+                ref={scrollRef}
+                contentContainerStyle={styles.content}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+            >
                 <Text style={styles.sectionEyebrow}>REQUEST DETAILS</Text>
                 <View style={styles.dateRow}>
                     <DateField label="From Date" value={fromDate} error={errors.fromDate} onPress={() => openDatePicker('fromDate')} />
@@ -143,6 +154,7 @@ export default function LeaveRequestScreen({ navigation }) {
                     multiline
                     textAlignVertical="top"
                     maxLength={500}
+                    onFocus={onInputFocus}
                 />
                 <View style={styles.reasonFooter}>
                     {errors.reason ? <Text style={styles.errorText}>{errors.reason}</Text> : <Text style={styles.helperText}>A short note helps your manager review the request.</Text>}
@@ -157,6 +169,7 @@ export default function LeaveRequestScreen({ navigation }) {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+            </KeyboardAvoidingView>
 
             <Modal visible={Boolean(activeDateField)} transparent animationType="fade" onRequestClose={() => setActiveDateField(null)}>
                 <View style={styles.modalBackdrop}>
@@ -204,6 +217,7 @@ const styles = StyleSheet.create({
     title: { color: '#FFF', fontSize: 20, fontWeight: '700' },
     subtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 3 },
     content: { flexGrow: 1, backgroundColor: '#F5F3F3', padding: 18, paddingBottom: 30 },
+    formArea: { flex: 1 },
     sectionEyebrow: { color: '#898282', fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 20 },
     dateRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
     dateField: { flex: 1 },

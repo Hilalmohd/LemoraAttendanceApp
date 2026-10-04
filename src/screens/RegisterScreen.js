@@ -17,8 +17,10 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { registerUser, DESIGNATIONS } from '../services/authService';
 import { pickProfileImage } from '../utils/profileImagePicker';
+import useKeyboardAwareScroll from '../utils/useKeyboardAwareScroll';
 
 export default function RegisterScreen({ navigation }) {
+  const { scrollRef, onInputFocus } = useKeyboardAwareScroll();
   const [fullName, setFullName] = useState('');
   const [designation, setDesignation] = useState(DESIGNATIONS[0]);
   const [photoUri, setPhotoUri] = useState(null);
@@ -73,11 +75,14 @@ export default function RegisterScreen({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor="#F5F3F3" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         >
           <Text style={styles.title}>Create account</Text>
           <Text style={styles.subtitle}>Register to start tracking attendance</Text>
@@ -109,6 +114,7 @@ export default function RegisterScreen({ navigation }) {
               style={styles.input}
               placeholder="Enter your full name"
               placeholderTextColor="#A0A0A0"
+              onFocus={onInputFocus}
               value={fullName}
               onChangeText={setFullName}
             />
@@ -129,6 +135,7 @@ export default function RegisterScreen({ navigation }) {
               placeholderTextColor="#A0A0A0"
               autoCapitalize="none"
               autoCorrect={false}
+              onFocus={onInputFocus}
               value={userId}
               onChangeText={setUserId}
             />
@@ -139,6 +146,7 @@ export default function RegisterScreen({ navigation }) {
               placeholder="Create a password"
               placeholderTextColor="#A0A0A0"
               secureTextEntry
+              onFocus={onInputFocus}
               value={password}
               onChangeText={setPassword}
             />
@@ -149,6 +157,7 @@ export default function RegisterScreen({ navigation }) {
               placeholder="Re-enter your password"
               placeholderTextColor="#A0A0A0"
               secureTextEntry
+              onFocus={onInputFocus}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />

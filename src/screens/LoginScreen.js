@@ -13,8 +13,10 @@ import {
   StatusBar,
 } from 'react-native';
 import { loginUser } from '../services/authService';
+import useKeyboardAwareScroll from '../utils/useKeyboardAwareScroll';
 
 export default function LoginScreen({ navigation }) {
+  const { scrollRef, onInputFocus } = useKeyboardAwareScroll();
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -43,11 +45,14 @@ export default function LoginScreen({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor="#F5F3F3" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         >
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Log in to your attendance account</Text>
@@ -60,6 +65,7 @@ export default function LoginScreen({ navigation }) {
               placeholderTextColor="#A0A0A0"
               autoCapitalize="none"
               autoCorrect={false}
+              onFocus={onInputFocus}
               value={userId}
               onChangeText={setUserId}
             />
@@ -70,6 +76,7 @@ export default function LoginScreen({ navigation }) {
               placeholder="Enter your password"
               placeholderTextColor="#A0A0A0"
               secureTextEntry
+              onFocus={onInputFocus}
               value={password}
               onChangeText={setPassword}
             />
