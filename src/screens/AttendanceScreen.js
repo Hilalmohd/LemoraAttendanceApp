@@ -107,7 +107,12 @@ export default function AttendanceScreen({ navigation }) {
                   <Detail label="Check-in" value={formatTime(item.checkIn)} />
                   <Detail label="Check-out" value={formatTime(item.checkOut)} />
                   <Detail label="Total hours" value={getWorkingHours(item)} />
-                  <Detail label="Late hours" value={isLeave ? 'No Check-In' : formatDuration(lateMinutes)} late={lateMinutes > 0} leave={isLeave} />
+                  <Detail
+                    label="Late hours"
+                    value={isLeave ? (item.submittedLeave && item.leaveType ? item.leaveType : 'No Check-In') : formatDuration(lateMinutes)}
+                    late={lateMinutes > 0}
+                    leave={isLeave}
+                  />
                 </View>
               </View>;
             }}
