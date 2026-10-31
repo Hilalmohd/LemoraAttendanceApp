@@ -62,6 +62,10 @@ If everything is set up correctly, you should see your new app running in the An
 
 This is one way to run your app — you can also build it directly from Android Studio or Xcode.
 
+## Attendance Location Setup
+
+Before recording attendance, configure the office boundary in `src/config/officeGeofence.js` by adding at least three `{ latitude, longitude }` vertices to `polygon` in order around the office perimeter. The app includes polygon-edge points as inside; an empty or invalid boundary blocks attendance.
+
 ## Step 3: Modify your app
 
 Now that you have successfully run the app, let's make changes!

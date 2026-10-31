@@ -10,12 +10,52 @@ jest.mock('../src/services/punchAuthenticationService', () => ({
   authenticatePunch: jest.fn(),
 }));
 
+jest.mock('../src/services/locationValidationService', () => ({
+  validatePunchLocation: jest.fn(),
+}));
+
 import storageAdapter from '../src/services/storageAdapter';
 import { authenticatePunch } from '../src/services/punchAuthenticationService';
+import { validatePunchLocation } from '../src/services/locationValidationService';
 import { checkIn, checkOut, getLateMinutes } from '../src/services/attendanceService';
 
 describe('attendance punch authentication', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    validatePunchLocation.mockResolvedValue({ success: true });
+  });
+
+  test('does not authenticate or save a check-in outside the office boundary', async () => {
+    storageAdapter.getAttendanceForUser.mockResolvedValue([]);
+    validatePunchLocation.mockResolvedValue({
+      success: false,
+      code: 'OUTSIDE_GEOFENCE',
+      error: 'You must be inside the office boundary to record attendance.',
+    });
+
+    const result = await checkIn('employee-1', new Date(2026, 8, 26, 9, 15));
+
+    expect(result.code).toBe('OUTSIDE_GEOFENCE');
+    expect(authenticatePunch).not.toHaveBeenCalled();
+    expect(storageAdapter.saveAttendanceForUser).not.toHaveBeenCalled();
+  });
+
+  test('does not authenticate or save a check-out when location services are disabled', async () => {
+    storageAdapter.getAttendanceForUser.mockResolvedValue([
+      { date: '2026-09-26', checkIn: '09:00' },
+    ]);
+    validatePunchLocation.mockResolvedValue({
+      success: false,
+      code: 'LOCATION_DISABLED',
+      error: 'Enable location services in your device settings to record attendance.',
+    });
+
+    const result = await checkOut('employee-1', new Date(2026, 8, 26, 17, 0));
+
+    expect(result.code).toBe('LOCATION_DISABLED');
+    expect(authenticatePunch).not.toHaveBeenCalled();
+    expect(storageAdapter.saveAttendanceForUser).not.toHaveBeenCalled();
+  });
 
   test('does not save a punch when device authentication is cancelled', async () => {
     storageAdapter.getAttendanceForUser.mockResolvedValue([]);

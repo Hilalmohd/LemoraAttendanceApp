@@ -1,5 +1,6 @@
 import storageAdapter from './storageAdapter';
 import { authenticatePunch } from './punchAuthenticationService';
+import { validatePunchLocation } from './locationValidationService';
 
 export const ATTENDANCE_SCHEDULE = {
   shiftStartHour: 9,
@@ -80,6 +81,10 @@ export async function checkIn(userId, date = new Date()) {
   if (existing?.checkIn) {
     return { success: false, error: 'You have already checked in today.' };
   }
+  const locationResult = await validatePunchLocation();
+  if (!locationResult.success) {
+    return { success: false, error: locationResult.error, code: locationResult.code };
+  }
   if (!await authenticatePunch('punch in')) {
     return { success: false, error: 'Authentication was cancelled or could not be completed.' };
   }
@@ -103,6 +108,10 @@ export async function checkOut(userId, date = new Date()) {
   }
   if (existing.checkOut) {
     return { success: false, error: 'You have already checked out today.' };
+  }
+  const locationResult = await validatePunchLocation();
+  if (!locationResult.success) {
+    return { success: false, error: locationResult.error, code: locationResult.code };
   }
   if (!await authenticatePunch('punch out')) {
     return { success: false, error: 'Authentication was cancelled or could not be completed.' };

@@ -23,6 +23,7 @@ import { checkIn, checkOut, getTodayAttendance } from '../services/attendanceSer
 import { processMissedAttendanceDays } from '../services/attendanceAbsenceService';
 import { getMonthKey, getMonthlyAttendanceMetrics } from '../services/attendanceMetricsService';
 import { subscribeToAttendanceMetrics } from '../services/attendanceMetricsEvents';
+import { openLocationSettings } from '../services/locationValidationService';
 import FingerPrintIcon from '../assets/icons/fingure.svg';
 // Fallback shown only if no logged-in user is found (shouldn't normally
 // happen, since AppNavigator only routes here after a session check).
@@ -114,6 +115,13 @@ export default function HomeScreen({ navigation } = {}) {
     try {
       const result = punchState === 'checkedIn' ? await checkOut(userId) : await checkIn(userId);
       if (!result.success) {
+        if (result.code === 'LOCATION_DISABLED' || result.code === 'LOCATION_PERMISSION_DENIED') {
+          Alert.alert('Location required', result.error, [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => openLocationSettings().catch(() => {}) },
+          ]);
+          return;
+        }
         const authenticationFailed = result.error?.startsWith('Authentication');
         Alert.alert(authenticationFailed ? 'Authentication required' : 'Punch unavailable', result.error);
         return;
